@@ -440,7 +440,7 @@ impl AudioRecorder {
         T: Sample + SizedSample + Copy + Send + 'static,
         f32: cpal::FromSample<T>,
     {
-        let ring_capacity = config.sample_rate().0 as usize * AUDIO_RING_SECONDS;
+        let ring_capacity = config.sample_rate() as usize * AUDIO_RING_SECONDS;
         let (mut sample_producer, mut sample_consumer) = RingBuffer::new(ring_capacity);
 
         // Touch rtrb's uninitialized pages before the stream starts to reduce
