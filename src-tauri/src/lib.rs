@@ -26,6 +26,7 @@ mod tray;
 mod tray_i18n;
 mod utils;
 mod vocabulary;
+pub mod windows_interaction;
 
 pub use cli::CliArgs;
 #[cfg(debug_assertions)]
@@ -236,6 +237,8 @@ fn initialize_core_logic(app_handle: &AppHandle) {
     // (#1660) — see signal_handle.rs.
     #[cfg(unix)]
     signal_handle::setup_signal_handler(app_handle.clone());
+
+    windows_interaction::init_interaction_guard();
 
     // The macOS activation policy for a start-hidden launch is applied before
     // the event loop runs (see `apply_startup_activation_policy`), not here:

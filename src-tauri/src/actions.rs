@@ -41,6 +41,7 @@ struct RecordingErrorEvent {
 struct FinishGuard(AppHandle, Arc<TranscriptionManager>);
 impl Drop for FinishGuard {
     fn drop(&mut self) {
+        crate::windows_interaction::set_recording_active(false);
         // Every terminal pipeline path (success, cancellation, transcription
         // error, output-handler error, or panic) ends the insertion session.
         self.1.clear_live_insertion();
@@ -730,6 +731,7 @@ pub(crate) async fn process_transcription_output(
 
 impl ShortcutAction for TranscribeAction {
     fn start(&self, app: &AppHandle, binding_id: &str, _shortcut_str: &str) {
+        crate::windows_interaction::set_recording_active(true);
         let start_time = Instant::now();
         debug!("TranscribeAction::start called for binding: {}", binding_id);
 
@@ -948,6 +950,7 @@ impl ShortcutAction for TranscribeAction {
     }
 
     fn stop(&self, app: &AppHandle, binding_id: &str, _shortcut_str: &str) {
+        crate::windows_interaction::set_recording_active(false);
         // Prevent a slow microphone from emitting a ready event or start chime
         // after the user has already requested stop.
         app.state::<Arc<AudioRecordingManager>>()

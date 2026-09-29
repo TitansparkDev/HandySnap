@@ -211,6 +211,7 @@ src-tauri/src/tray.rs
 src-tauri/src/tray_i18n.rs
 src-tauri/src/utils.rs
 src-tauri/src/vocabulary.rs
+src-tauri/src/windows_interaction.rs
 src-tauri/swift/apple_intelligence.swift
 src-tauri/swift/apple_intelligence_bridge.h
 src-tauri/swift/apple_intelligence_stub.swift

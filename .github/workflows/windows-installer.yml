@@ -182,5 +182,5 @@ jobs:
             gh release create $tag @assets `
               --repo $env:GITHUB_REPOSITORY `
               --title "VoiceSnap-Handy $tag" `
-              --notes "VoiceSnap-Handy Windows Installer ($tag)`n`nIncludes all Wave 0 through Wave 8 improvements: live preview and streaming transcription, committed live insertion, local offline AI cleanup, latency diagnostics, custom vocabulary preservation with spoken aliases, richer history, hardware/device fallback, media pause/resume, and Windows clipboard hardening."
+              --notes "VoiceSnap-Handy Windows Installer ($tag)`n`nIncludes all upstream Handy updates merged cleanly through v0.9.7, Wave 0-8 features, and the Windows voice record interaction fix ensuring full mouse wheel scrolling and computer interaction while holding the voice recording macro."
           }

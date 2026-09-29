@@ -445,6 +445,28 @@ pub fn create_recording_overlay(app_handle: &AppHandle) {
     #[allow(unused_variables)]
     match builder.build() {
         Ok(window) => {
+            #[cfg(target_os = "windows")]
+            {
+                if let Ok(hwnd) = window.hwnd() {
+                    use windows::Win32::Foundation::HWND;
+                    use windows::Win32::UI::WindowsAndMessaging::{
+                        GetWindowLongPtrW, SetWindowLongPtrW, GWL_EXSTYLE, WS_EX_NOACTIVATE,
+                        WS_EX_TRANSPARENT,
+                    };
+                    unsafe {
+                        let ex_style = GetWindowLongPtrW(HWND(hwnd.0), GWL_EXSTYLE);
+                        let _ = SetWindowLongPtrW(
+                            HWND(hwnd.0),
+                            GWL_EXSTYLE,
+                            ex_style
+                                | (WS_EX_NOACTIVATE.0 as isize)
+                                | (WS_EX_TRANSPARENT.0 as isize),
+                        );
+                    }
+                }
+                let _ = window.set_ignore_cursor_events(true);
+            }
+
             #[cfg(target_os = "linux")]
             {
                 // Try to initialize GTK layer shell, ignore errors if compositor doesn't support it
@@ -581,7 +603,20 @@ fn show_overlay_state_on_main(app_handle: &AppHandle, state: &str) {
             let pos_calc_elapsed = pos_started.elapsed() - set_pos_elapsed;
 
             let show_started = std::time::Instant::now();
+            #[cfg(not(target_os = "windows"))]
             let _ = overlay_window.show();
+            #[cfg(target_os = "windows")]
+            {
+                if let Ok(hwnd) = overlay_window.hwnd() {
+                    use windows::Win32::Foundation::HWND;
+                    use windows::Win32::UI::WindowsAndMessaging::{ShowWindow, SW_SHOWNOACTIVATE};
+                    unsafe {
+                        let _ = ShowWindow(HWND(hwnd.0), SW_SHOWNOACTIVATE);
+                    }
+                } else {
+                    let _ = overlay_window.show();
+                }
+            }
             let show_elapsed = show_started.elapsed();
 
             // On Windows, aggressively re-assert "topmost" in the native Z-order after showing
@@ -605,6 +640,9 @@ fn show_overlay_state_on_main(app_handle: &AppHandle, state: &str) {
             );
         }
 
+        if state == "recording" || state == "streaming" {
+            crate::windows_interaction::set_recording_active(true);
+        }
         let _ = overlay_window.emit("show-overlay", state);
     }
 }
@@ -703,6 +741,7 @@ static OVERLAY_SHOW_GENERATION: AtomicU64 = AtomicU64::new(0);
 
 /// Hides the recording overlay window with fade-out animation
 pub fn hide_recording_overlay(app_handle: &AppHandle) {
+    crate::windows_interaction::set_recording_active(false);
     // Always hide the overlay regardless of settings - if setting was changed while recording,
     // we still want to hide it properly
     if let Some(overlay_window) = app_handle.get_webview_window("recording_overlay") {
