@@ -59,6 +59,7 @@ scripts/mirror_models.py
 scripts/stream-benchmark.mjs
 scripts/stream-benchmark.test.mjs
 sponsor-images/boltai.jpg
+sponsor-images/cantydigital.png
 sponsor-images/epicenter.png
 sponsor-images/wordcab.png
 src-tauri/.gitignore
@@ -149,6 +150,7 @@ src-tauri/src/audio_feedback.rs
 src-tauri/src/audio_toolkit/audio/device.rs
 src-tauri/src/audio_toolkit/audio/mod.rs
 src-tauri/src/audio_toolkit/audio/recorder.rs
+src-tauri/src/audio_toolkit/audio/recorder/tests.rs
 src-tauri/src/audio_toolkit/audio/resampler.rs
 src-tauri/src/audio_toolkit/audio/utils.rs
 src-tauri/src/audio_toolkit/audio/visualizer.rs
@@ -298,6 +300,7 @@ src/components/settings/debug/KeyboardImplementationSelector.tsx
 src/components/settings/debug/LiveLogViewer.tsx
 src/components/settings/debug/LogDirectory.tsx
 src/components/settings/debug/LogLevelSelector.tsx
+src/components/settings/debug/OnboardingPreview.tsx
 src/components/settings/debug/PasteDelay.tsx
 src/components/settings/debug/RecordingBuffer.tsx
 src/components/settings/debug/ReliablePaste.tsx
@@ -307,6 +310,8 @@ src/components/settings/debug/index.ts
 src/components/settings/general/GeneralSettings.tsx
 src/components/settings/general/ModelSettingsCard.tsx
 src/components/settings/history/HistorySettings.tsx
+src/components/settings/history/clipboard.test.ts
+src/components/settings/history/clipboard.ts
 src/components/settings/index.ts
 src/components/settings/models/ModelsSettings.tsx
 src/components/settings/models/index.ts
@@ -350,6 +355,7 @@ src/i18n/index.ts
 src/i18n/languages.ts
 src/i18n/locales/ar/translation.json
 src/i18n/locales/bg/translation.json
+src/i18n/locales/ca/translation.json
 src/i18n/locales/cs/translation.json
 src/i18n/locales/da/translation.json
 src/i18n/locales/de/translation.json
@@ -358,6 +364,7 @@ src/i18n/locales/es/translation.json
 src/i18n/locales/fr/translation.json
 src/i18n/locales/he/translation.json
 src/i18n/locales/hi/translation.json
+src/i18n/locales/id/translation.json
 src/i18n/locales/it/translation.json
 src/i18n/locales/ja/translation.json
 src/i18n/locales/ko/translation.json
@@ -376,6 +383,7 @@ src/lib/compat.ts
 src/lib/constants/languages.ts
 src/lib/types/events.ts
 src/lib/utils/format.ts
+src/lib/utils/keyboard.test.ts
 src/lib/utils/keyboard.ts
 src/lib/utils/modelTranslation.ts
 src/lib/utils/rtl.ts

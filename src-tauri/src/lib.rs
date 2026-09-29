@@ -31,6 +31,7 @@ pub use cli::CliArgs;
 #[cfg(debug_assertions)]
 use specta_typescript::{BigIntExportBehavior, Typescript};
 use tauri_specta::{collect_commands, collect_events, Builder};
+pub use utils::env_flag_enabled;
 
 use env_filter::Builder as EnvFilterBuilder;
 use managers::audio::AudioRecordingManager;
@@ -1125,6 +1126,13 @@ pub fn run(cli_args: CliArgs) {
         ))
         .manage(cli_args.clone())
         .setup(move |app| {
+            #[cfg(target_os = "windows")]
+            log::info!(
+                "Vulkan layer policy: VK_LOADER_LAYERS_DISABLE={:?}, HANDY_KEEP_VULKAN_IMPLICIT_LAYERS={}",
+                std::env::var_os("VK_LOADER_LAYERS_DISABLE"),
+                utils::env_flag_enabled("HANDY_KEEP_VULKAN_IMPLICIT_LAYERS"),
+            );
+
             specta_builder.mount_events(app);
 
             // Headless one-shot path (`--transcribe-file` / `--list-devices` /
@@ -1156,6 +1164,7 @@ pub fn run(cli_args: CliArgs) {
                     app_handle.manage(recording_manager);
                 }
                 managers::transcription::init_transcribe_backend();
+                managers::transcription::report_compute_devices();
                 managers::transcription::apply_accelerator_settings(&app_handle);
 
                 let handle = app_handle.clone();
@@ -1194,7 +1203,33 @@ pub fn run(cli_args: CliArgs) {
                 win_builder = win_builder.data_directory(data_dir.join("webview"));
             }
 
-            win_builder.build()?;
+            // Only used on Windows, to disable WebView2 browser accelerators.
+            #[cfg_attr(not(target_os = "windows"), allow(unused_variables))]
+            let main_window = win_builder.build()?;
+
+            // Disable WebView2 browser accelerators (F5, F6, Ctrl+F, F12, ...).
+            // A settings window has no use for them, and pressing F6 while
+            // recording a shortcut was reported to turn the whole window white
+            // (cjpais/Handy#1940), likely by triggering WebView2 focus cycling.
+            // DevTools stays enabled; only the F12 accelerator is lost.
+            #[cfg(target_os = "windows")]
+            {
+                let _ = main_window.with_webview(|webview| unsafe {
+                    use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2Settings3;
+                    use windows::core::Interface;
+
+                    let result = webview
+                        .controller()
+                        .CoreWebView2()
+                        .and_then(|core| core.Settings())
+                        .and_then(|settings| settings.cast::<ICoreWebView2Settings3>())
+                        .and_then(|settings| settings.SetAreBrowserAcceleratorKeysEnabled(false));
+
+                    if let Err(error) = result {
+                        log::warn!("Failed to disable WebView2 browser accelerators: {error}");
+                    }
+                });
+            }
 
             let mut settings = get_settings(app.handle());
 
@@ -1238,11 +1273,14 @@ pub fn run(cli_args: CliArgs) {
             );
 
             // Pre-warm GPU/accelerator enumeration on a background thread. The first
-            // get_available_accelerators call enumerates ORT execution providers and
-            // transcribe-cpp compute devices, which can take a moment; without this
+            // device listing opens the GPU, which on macOS loads ggml's Metal library
+            // and compiles it when the system shader cache does not have it yet, so it
+            // stays off the startup path. get_available_accelerators then enumerates
+            // ORT execution providers and transcribe-cpp compute devices; without this
             // the cost is paid synchronously when the user first opens Advanced
             // settings, freezing the UI. Result is cached in a OnceLock.
             std::thread::spawn(|| {
+                crate::managers::transcription::report_compute_devices();
                 let _ = crate::managers::transcription::get_available_accelerators();
             });
 

@@ -36,17 +36,15 @@ struct RecordingErrorEvent {
     detail: Option<String>,
 }
 
-/// Drop guard that notifies the [`TranscriptionCoordinator`] when the
-/// transcription pipeline finishes — whether it completes normally or panics.
-struct FinishGuard(AppHandle);
+/// Drop guard that finishes the transcription pipeline, including immediate
+/// model unloading on early exits.
+struct FinishGuard(AppHandle, Arc<TranscriptionManager>);
 impl Drop for FinishGuard {
     fn drop(&mut self) {
         // Every terminal pipeline path (success, cancellation, transcription
         // error, output-handler error, or panic) ends the insertion session.
-        if let Some(tm) = self.0.try_state::<Arc<TranscriptionManager>>() {
-            tm.clear_live_insertion();
-            tm.maybe_unload_immediately("transcription pipeline completion");
-        }
+        self.1.clear_live_insertion();
+        self.1.maybe_unload_immediately("transcription pipeline completion");
         if let Some(c) = self.0.try_state::<TranscriptionCoordinator>() {
             c.notify_processing_finished();
         }
@@ -752,6 +750,19 @@ impl ShortcutAction for TranscribeAction {
         });
         let kickoff_elapsed = kickoff_started.elapsed();
 
+        // Don't open the mic if nothing can transcribe the recording; the load
+        // kicked off above fails and reports why.
+        if !tm.is_model_loaded() {
+            let selected_model = get_settings(app).selected_model;
+            if let Err(e) = app
+                .state::<Arc<ModelManager>>()
+                .get_model_path(&selected_model)
+            {
+                warn!("Not starting recording: no model can transcribe it ({})", e);
+                return;
+            }
+        }
+
         let binding_id = binding_id.to_string();
         let tray_started = Instant::now();
         set_tray_state(app, TrayIconState::Recording);
@@ -989,7 +1000,7 @@ impl ShortcutAction for TranscribeAction {
         let cancel_generation = rm.cancel_generation();
 
         tauri::async_runtime::spawn(async move {
-            let _guard = FinishGuard(ah.clone());
+            let _guard = FinishGuard(ah.clone(), Arc::clone(&tm));
             debug!(
                 "Starting async transcription task for binding: {}",
                 binding_id
